@@ -60,6 +60,22 @@ async function run() {
             res.send(result)
         })
 
+        // add interested crops
+        app.post('/crops/:id/interests', async (req, res) => {
+            const crop_id = req.params.id
+            const interest = req.body
+            interest.interest_id = new ObjectId()
+            interest.crop_id = crop_id
+            interest.status = "pending"
+
+            const update = {
+                $push: { interest: interest }
+            }
+            const result = await cropsCollection.updateOne({ _id: new ObjectId(crop_id) }, update)
+
+            res.send(result)
+        })
+
         //  await client.db("admin").command({ ping: 1 });
         // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
