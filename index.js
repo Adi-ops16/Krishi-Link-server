@@ -5,9 +5,37 @@ require('dotenv').config()
 const app = express()
 const port = process.env.PORT || 3000;
 
+const admin = require("firebase-admin");
+
+
+const decoded = Buffer.from(process.env.FIREBASE_SERVICE_KEY, "base64").toString("utf-8")
+const serviceAccount = JSON.parse(decoded);
+
+
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+});
+
+
 // middlewares
 app.use(cors())
 app.use(express.json())
+
+
+const verifyFirebaseToken = async (req, res, next) => {
+    const authorization = req.headers.Authorization
+    const token = authorization.split(' ')[1]
+    if (!token) {
+        return res.status(401).send({ message: "You are not authorized to access this data" })
+    }
+    try {
+        const decoded = await admin.auth().verifyIdToken(token)
+        next()
+    }
+    catch (error) {
+        return res.status(401).send({ message: "Unauthorized access" })
+    }
+}
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@personal-hero.gxzvpbe.mongodb.net/?appName=Personal-Hero`;
 
