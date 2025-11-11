@@ -23,8 +23,11 @@ app.use(express.json())
 
 
 const verifyFirebaseToken = async (req, res, next) => {
-    const authorization = req.headers.Authorization
-    const token = authorization.split(' ')[1]
+    const authorization = req.headers.Authorization || req.headers.authorization
+    if (!authorization) {
+        return res.status(201).send({ message: "You are not authorized to access this data" })
+    }
+    const token = authorization.split(" ")[1]
     if (!token) {
         return res.status(401).send({ message: "You are not authorized to access this data" })
     }
@@ -74,13 +77,27 @@ async function run() {
             res.send(result)
         })
 
+        // get all interests of a crop for user API
+        app.get('/crops/:id/interests', async (req, res) => {
+            const userEmail = req.query.email
+            const crop_id = new ObjectId(req.params.id)
+            const crop = await cropsCollection.findOne({ _id: crop_id })
+            if (crop.owner.owner_email !== userEmail) {
+                return res.status(403).send({ message: "unauthorize access" })
+            }
+            res.send({
+                interests: crop.interests
+            })
+        })
+
+
         // Add Crops API
         app.post('/crops', async (req, res) => {
             const cropData = req.body;
 
             const newCrop = {
                 ...cropData,
-                interest: [],
+                interests: [],
                 created_at: new Date(),
                 updated_at: new Date()
             }
@@ -88,16 +105,16 @@ async function run() {
             res.send(result)
         })
 
-        // add interested crops
+        // post interest for a crop API
         app.post('/crops/:id/interests', async (req, res) => {
             const crop_id = req.params.id
             const interest = req.body
             interest.interest_id = new ObjectId()
-            interest.crop_id = crop_id
+            interest.crop_id = new ObjectId(crop_id)
             interest.status = "pending"
 
             const update = {
-                $push: { interest: interest }
+                $push: { interests: interest }
             }
             const result = await cropsCollection.updateOne({ _id: new ObjectId(crop_id) }, update)
 
