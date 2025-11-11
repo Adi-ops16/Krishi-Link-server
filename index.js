@@ -90,6 +90,32 @@ async function run() {
             })
         })
 
+        // get all crops of a user posted
+        // app.get('/crops/owner', async (req, res) => {
+        //     const ownerEmail = req.query.email
+        //     const filter = {
+        //         "owner.owner_email": ownerEmail
+        //     }
+        //     const result = await cropsCollection.find(filter).toArray()
+        //     res.send(result)
+        // })
+
+        // get all interests of a user 
+        app.get('/interests/by', async (req, res) => {
+            const userEmail = req.query.email
+            const crops = await cropsCollection.find({ "interests.interestedUserEmail": userEmail }).toArray()
+
+            const interestsOfUser = []
+            crops.forEach(crop => {
+                crop.interests.forEach(interest => {
+                    if (interest.interestedUserEmail === userEmail) {
+                        interestsOfUser.push(interest)
+                    }
+                })
+            })
+
+            res.send(interestsOfUser)
+        })
 
         // Add Crops API
         app.post('/crops', async (req, res) => {
