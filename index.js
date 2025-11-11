@@ -91,14 +91,14 @@ async function run() {
         })
 
         // get all crops of a user posted
-        // app.get('/crops/owner', async (req, res) => {
-        //     const ownerEmail = req.query.email
-        //     const filter = {
-        //         "owner.owner_email": ownerEmail
-        //     }
-        //     const result = await cropsCollection.find(filter).toArray()
-        //     res.send(result)
-        // })
+        app.get('/crops-owner', async (req, res) => {
+            const ownerEmail = req.query.email
+            const filter = {
+                "owner.owner_email": ownerEmail
+            }
+            const result = await cropsCollection.find(filter).toArray()
+            res.send(result)
+        })
 
         // get all interests of a user 
         app.get('/interests/by', async (req, res) => {
