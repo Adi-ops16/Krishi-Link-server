@@ -90,6 +90,33 @@ async function run() {
             })
         })
 
+        // API to modify status
+        app.patch('/crops/:id/interests/:interestId', async (req, res) => {
+            const { id, interestId } = req.params
+            const { status } = req.body
+
+            const filter = {
+                _id: new ObjectId(id),
+                "interests.interest_id": new ObjectId(interestId)
+            }
+            const modify = {
+                $set: {
+                    "interests.$.status": status
+                }
+            }
+            const result = await cropsCollection.updateOne(filter, modify)
+
+            if (result.matchedCount == 0) {
+                return res.status(404).send({ message: "interest not found" })
+            }
+
+            res.send({
+                success: true,
+                status: `Interest ${status}`,
+                modifiedCount: result.modifiedCount
+            })
+        })
+
         // get all crops of a user posted
         app.get('/crops-owner', async (req, res) => {
             const ownerEmail = req.query.email
