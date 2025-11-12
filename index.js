@@ -77,7 +77,7 @@ async function run() {
             res.send(result)
         })
 
-        // get all interests of a crop for user API
+        // get all interests of a crop for user 
         app.get('/crops/:id/interests', async (req, res) => {
             const userEmail = req.query.email
             const crop_id = new ObjectId(req.params.id)
@@ -90,7 +90,7 @@ async function run() {
             })
         })
 
-        // API to modify status
+        // API to modify status os interest
         app.patch('/crops/:id/interests/:interestId', async (req, res) => {
             const { id, interestId } = req.params
             const { status } = req.body
@@ -117,7 +117,7 @@ async function run() {
             })
         })
 
-        // get all crops of a user posted
+        // get all posts a user
         app.get('/crops-owner', async (req, res) => {
             const ownerEmail = req.query.email
             const filter = {
@@ -157,6 +157,32 @@ async function run() {
             const result = await cropsCollection.insertOne(newCrop)
             res.send(result)
         })
+
+        // modify / update added crop
+
+        app.patch('/update/crop/:id', async (req, res) => {
+            const id = req.params.id
+            const updatedCrops = req.body
+            const filter = {
+                _id: new ObjectId(id)
+            }
+            const update = {
+                $set: updatedCrops
+            }
+            const result = await cropsCollection.updateOne(filter, update)
+
+            if (result.modifiedCount > 0) {
+                return res.send({ status: 200, message: "Product updated successfully", modifiedCount: result.modifiedCount })
+            }
+            else {
+                return res.send({ status: 404, message: "Product not found and no changes made" })
+            }
+
+            res.send({ status: 200, message: result })
+        })
+
+
+        
 
         // post interest for a crop API
         app.post('/crops/:id/interests', async (req, res) => {
