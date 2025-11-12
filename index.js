@@ -182,7 +182,21 @@ async function run() {
         })
 
 
-        
+        //Delete crop
+        app.delete('/delete/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = {
+                _id: new ObjectId(id)
+            }
+            const result = await cropsCollection.deleteOne(filter)
+
+            if (result.deletedCount !== 0) {
+                res.status(200).send({ status: 200, message: "success", deletedCount: result.deletedCount })
+            }
+            else {
+                res.status(404).send({ status: 404, message: "Deletion failed." })
+            }
+        })
 
         // post interest for a crop API
         app.post('/crops/:id/interests', async (req, res) => {
