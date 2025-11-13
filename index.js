@@ -55,6 +55,24 @@ async function run() {
         // await client.connect();
         const DB = client.db("Krishi-Link-DB")
         const cropsCollection = DB.collection('crops')
+        const usersCollection = DB.collection('users')
+
+        // add user to database
+        app.post('/user', async (req, res) => {
+            const user = req.body;
+            const existingUser = await usersCollection.findOne({ email: user.email })
+            if (existingUser) {
+                return res.send({ insertion: "Failed", message: "User already exists" })
+            }
+
+            const result = await usersCollection.insertOne(user)
+            res.send({ insertion: "Success", message: "User created successfully" })
+        })
+
+
+        app.get("/", (req, res) => {
+            res.send("Krishi-Link server is running")
+        })
 
         // all crops API
         app.get('/crops', async (req, res) => {
@@ -78,7 +96,7 @@ async function run() {
         })
 
         // get all interests of a crop for user 
-        app.get('/crops/:id/interests', async (req, res) => {
+        app.get('/crops/:id/interests', verifyFirebaseToken, async (req, res) => {
             const userEmail = req.query.email
             const crop_id = new ObjectId(req.params.id)
             const crop = await cropsCollection.findOne({ _id: crop_id })
@@ -90,8 +108,8 @@ async function run() {
             })
         })
 
-        // API to modify status os interest
-        app.patch('/crops/:id/interests/:interestId', async (req, res) => {
+        // API to modify status of interest
+        app.patch('/crops/:id/interests/:interestId', verifyFirebaseToken, async (req, res) => {
             const { id, interestId } = req.params
             const { status } = req.body
 
@@ -118,7 +136,7 @@ async function run() {
         })
 
         // get all posts a user
-        app.get('/crops-owner', async (req, res) => {
+        app.get('/crops-owner', verifyFirebaseToken, async (req, res) => {
             const ownerEmail = req.query.email
             const filter = {
                 "owner.owner_email": ownerEmail
@@ -128,7 +146,7 @@ async function run() {
         })
 
         // get all interests of a user 
-        app.get('/interests/by', async (req, res) => {
+        app.get('/interests/by', verifyFirebaseToken, async (req, res) => {
             const userEmail = req.query.email
             const crops = await cropsCollection.find({ "interests.interestedUserEmail": userEmail }).toArray()
 
@@ -136,7 +154,13 @@ async function run() {
             crops.forEach(crop => {
                 crop.interests.forEach(interest => {
                     if (interest.interestedUserEmail === userEmail) {
-                        interestsOfUser.push(interest)
+                        interestsOfUser.push({
+                            ...interest,
+                            crop_name: crop.crop_name,
+                            owner_name: crop.owner.owner_name,
+                            crop_image: crop.crop_image,
+                            _id: crop._id
+                        })
                     }
                 })
             })
@@ -145,7 +169,7 @@ async function run() {
         })
 
         // Add Crops API
-        app.post('/crops', async (req, res) => {
+        app.post('/crops', verifyFirebaseToken, async (req, res) => {
             const cropData = req.body;
 
             const newCrop = {
@@ -160,7 +184,7 @@ async function run() {
 
         // modify / update added crop
 
-        app.patch('/update/crop/:id', async (req, res) => {
+        app.patch('/update/crop/:id', verifyFirebaseToken, async (req, res) => {
             const id = req.params.id
             const updatedCrops = req.body
             const filter = {
@@ -183,7 +207,7 @@ async function run() {
 
 
         //Delete crop
-        app.delete('/delete/:id', async (req, res) => {
+        app.delete('/delete/:id', verifyFirebaseToken, async (req, res) => {
             const id = req.params.id;
             const filter = {
                 _id: new ObjectId(id)
@@ -199,7 +223,7 @@ async function run() {
         })
 
         // post interest for a crop API
-        app.post('/crops/:id/interests', async (req, res) => {
+        app.post('/crops/:id/interests', verifyFirebaseToken, async (req, res) => {
             const crop_id = req.params.id
             const interest = req.body
             interest.interest_id = new ObjectId()
