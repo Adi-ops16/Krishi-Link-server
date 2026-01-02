@@ -57,6 +57,10 @@ async function run() {
         const cropsCollection = DB.collection('crops')
         const usersCollection = DB.collection('users')
 
+        app.get("/", (req, res) => {
+            res.send("Krishi-Link server is running")
+        })
+
         // add user to database
         app.post('/user', async (req, res) => {
             const user = req.body;
@@ -67,11 +71,6 @@ async function run() {
 
             const result = await usersCollection.insertOne(user)
             res.send({ insertion: "Success", message: "User created successfully" })
-        })
-
-
-        app.get("/", (req, res) => {
-            res.send("Krishi-Link server is running")
         })
 
         // all crops API
@@ -237,6 +236,111 @@ async function run() {
 
             res.send(result)
         })
+
+        // dashboard stats
+        app.get('/dashboard/stats', verifyFirebaseToken, async (req, res) => {
+            try {
+                const { email } = req.query;
+
+                if (!email) {
+                    return res.status(400).json({ message: "Bad request: email is required" });
+                }
+
+                const pipeline = [
+                    // 1. Only crops owned by this user
+                    {
+                        $match: {
+                            "owner.owner_email": email
+                        }
+                    },
+
+                    // 2. Count total crops before unwinding
+                    {
+                        $addFields: {
+                            hasInterests: { $cond: [{ $isArray: "$interests" }, true, false] }
+                        }
+                    },
+
+                    // 3. Unwind interests but keep crops without interests
+                    {
+                        $unwind: {
+                            path: "$interests",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+
+                    // 4. Aggregate dashboard numbers
+                    {
+                        $group: {
+                            _id: null,
+
+                            // total crops listed
+                            totalCropsListed: { $addToSet: "$_id" },
+
+                            // pending interests
+                            pendingInterestsCount: {
+                                $sum: {
+                                    $cond: [
+                                        { $eq: ["$interests.status", "pending"] },
+                                        1,
+                                        0
+                                    ]
+                                }
+                            },
+
+                            // accepted interests
+                            acceptedInterestsCount: {
+                                $sum: {
+                                    $cond: [
+                                        { $eq: ["$interests.status", "accepted"] },
+                                        1,
+                                        0
+                                    ]
+                                }
+                            },
+
+                            // approximate profit (accepted only)
+                            approximateProfit: {
+                                $sum: {
+                                    $cond: [
+                                        { $eq: ["$interests.status", "accepted"] },
+                                        "$interests.total_price",
+                                        0
+                                    ]
+                                }
+                            }
+                        }
+                    },
+
+                    // 5. Shape final response
+                    {
+                        $project: {
+                            _id: 0,
+                            totalCropsListed: { $size: "$totalCropsListed" },
+                            pendingInterestsCount: 1,
+                            acceptedInterestsCount: 1,
+                            approximateProfit: 1
+                        }
+                    }
+                ];
+
+                const result = await cropsCollection.aggregate(pipeline).toArray();
+
+                res.send(
+                    result[0] || {
+                        totalCropsListed: 0,
+                        pendingInterestsCount: 0,
+                        acceptedInterestsCount: 0,
+                        approximateProfit: 0
+                    }
+                );
+
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({ message: "Internal server error" });
+            }
+        });
+
 
         //  await client.db("admin").command({ ping: 1 });
         // console.log("Pinged your deployment. You successfully connected to MongoDB!");
