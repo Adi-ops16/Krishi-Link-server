@@ -75,12 +75,12 @@ async function run() {
 
         // all crops API
         app.get('/crops', async (req, res) => {
-            const limit = parseInt(req.query.limit);
-            const sortOrder = req.query.sort === 'asc' ? 1 : -1;
+            const type = req.query.type
+            const price = req.query.price === 'asc' ? 1 : -1;
+            const query = { type }
 
-            const result = await cropsCollection.find()
-                .sort({ created_at: sortOrder })
-                .limit(limit)
+            const result = await cropsCollection.find(query)
+                .sort({ price_per_unit: price })
                 .toArray()
 
             res.send(result)
@@ -134,7 +134,7 @@ async function run() {
             })
         })
 
-        // get all posts a user
+        // get all posts of a user
         app.get('/crops-owner', verifyFirebaseToken, async (req, res) => {
             const ownerEmail = req.query.email
             const filter = {
