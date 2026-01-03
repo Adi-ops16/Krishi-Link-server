@@ -75,9 +75,12 @@ async function run() {
 
         // all crops API
         app.get('/crops', async (req, res) => {
+            const query = {}
             const type = req.query.type
             const price = req.query.price === 'asc' ? 1 : -1;
-            const query = { type }
+            if (type) {
+                query.type = type
+            }
 
             const result = await cropsCollection.find(query)
                 .sort({ price_per_unit: price })
